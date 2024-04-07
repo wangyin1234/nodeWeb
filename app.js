@@ -10,7 +10,7 @@ const User = require('./models/user');
 const chatCompletion = require('./models/chatCompletion');
 const assistant = require('./models/assistant');
 const bodyParser = require('body-parser');
-const port = 3000;
+const port = 5000;
 const ejsMate = require('ejs-mate');
 const session = require('express-session');
 const flash = require('connect-flash');
@@ -515,7 +515,7 @@ app.post('/get-assistant-response', isAuthenticated, uploadInMemory.array('assis
             await delay(1000); // Wait for 1 second before checking again
         }
         if (success) {
-            
+
 
             let messages = await openai.beta.threads.messages.list(threadId);
             res.status(200).json({
@@ -825,11 +825,18 @@ app.get('/users', isAdmin, async (req, res) => {
 });
 
 app.post('/admin/usage', async (req, res) => {
-    const promptId = req.body.prompt;
+    let promptId = req.body.prompt;
+    const userId = req.body.userId;
     const usageLimit = parseInt(req.body.usageLimit, 10);
+    const emails = req.body.emails;
+    if (!userId) {
+        promptId = req.body.promptBatch;
+        if (!emails) {
+            return res.status(400).json({ message: 'emails is empty' });
+        }
+    }
     let modelFound = null;
     let modelType = '';
-
     try {
         // First, try to find the prompt in the Assistant model
         const assistantModel = await assistant.findById(promptId);
@@ -850,26 +857,47 @@ app.post('/admin/usage', async (req, res) => {
         }
 
         // Find the user
-        const user = await User.findById(req.body.userId); // Ensure req.user.id is set appropriately
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+        if (emails) {
+            for (let email of emails.split(",")) {
+                const user = await User.findByUsername(email); // Ensure req.user.id is set appropriately
+                if (!user) {
+                    return res.status(404).json({ message: email + ' User not found' });
+                }
+                // Determine the correct usage array based on modelType and assign the new usage
+                const usageArray = modelType === 'assistant' ? user.assistantUsage : user.chatUsage;
+                const existingUsageIndex = usageArray.findIndex(entry => entry.id.equals(modelFound._id));
 
-        // Determine the correct usage array based on modelType and assign the new usage
-        const usageArray = modelType === 'assistant' ? user.assistantUsage : user.chatUsage;
-        const existingUsageIndex = usageArray.findIndex(entry => entry.id.equals(modelFound._id));
+                if (existingUsageIndex !== -1) {
+                    // Update existing usage if it already exists for the user
+                    usageArray[existingUsageIndex].usage = usageLimit; // Set usage to 1 as per your requirement to assign not increment
+                    usageArray[existingUsageIndex].total = 0; // Set usage to 1 as per your requirement to assign not increment
+                } else {
+                    // Assign the prompt to the user with usage set to 1
+                    usageArray.push({ id: modelFound._id, usage: usageLimit, total: 0 });
+                }
 
-        if (existingUsageIndex !== -1) {
-            // Update existing usage if it already exists for the user
-            usageArray[existingUsageIndex].usage = usageLimit; // Set usage to 1 as per your requirement to assign not increment
-            usageArray[existingUsageIndex].total = 0; // Set usage to 1 as per your requirement to assign not increment
+                await user.save();
+            }
         } else {
-            // Assign the prompt to the user with usage set to 1
-            usageArray.push({ id: modelFound._id, usage: usageLimit, total: 0 });
-            console.log(usageArray);
-        }
+            const user = await User.findById(req.body.userId); // Ensure req.user.id is set appropriately
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+            // Determine the correct usage array based on modelType and assign the new usage
+            const usageArray = modelType === 'assistant' ? user.assistantUsage : user.chatUsage;
+            const existingUsageIndex = usageArray.findIndex(entry => entry.id.equals(modelFound._id));
 
-        await user.save();
+            if (existingUsageIndex !== -1) {
+                // Update existing usage if it already exists for the user
+                usageArray[existingUsageIndex].usage = usageLimit; // Set usage to 1 as per your requirement to assign not increment
+                usageArray[existingUsageIndex].total = 0; // Set usage to 1 as per your requirement to assign not increment
+            } else {
+                // Assign the prompt to the user with usage set to 1
+                usageArray.push({ id: modelFound._id, usage: usageLimit, total: 0 });
+            }
+
+            await user.save();
+        }
         req.flash('success', "Usage Access updated");
         res.redirect('/users')
 
@@ -883,7 +911,7 @@ app.get('/user/:userId/usage', async (req, res) => {
     try {
         const { userId } = req.params;
         const user = await User.findById(userId);
-        
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }

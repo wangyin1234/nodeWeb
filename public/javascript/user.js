@@ -39,6 +39,27 @@ closemodal.addEventListener('click', function () {
     modal.querySelector('#userId').value = '';
 })
 
+// show modale
+const addBatchBtn = document.querySelectorAll('.add-batch');
+const closeBatchModal = document.querySelector('.batch-modal__close');
+const batchModal = document.querySelector('.batch-modal__container');
+const batchOverlayr = document.querySelector('.batch-modal-overlay');
+
+addBatchBtn.forEach(b => {
+    b.addEventListener('click', function () {
+        batchModal.classList.add('show-modal');
+        batchOverlayr.classList.add('show-modal-overlay');
+    })
+})
+batchOverlayr.addEventListener('click', () => {
+    batchModal.classList.remove('show-modal');
+    batchOverlayr.classList.remove('show-modal-overlay');
+})
+closeBatchModal.addEventListener('click', function () {
+    batchModal.classList.remove('show-modal');
+    batchOverlayr.classList.remove('show-modal-overlay');
+})
+
 // ============== select ==============
 const selected = document.querySelector('.selected');
 const selectedP = document.querySelector('.selected p');
@@ -46,14 +67,31 @@ const optionsContainer = document.querySelector('.options-container');
 const options = document.querySelectorAll('.option label')
 
 selected.addEventListener('click', () => {
-	optionsContainer.classList.toggle('activec');
+    optionsContainer.classList.toggle('activec');
 })
 
 options.forEach(o => {
-	o.addEventListener('click', () => {
-		selectedP.innerHTML = o.innerHTML;
-		optionsContainer.classList.remove('activec');
-	})
+    o.addEventListener('click', () => {
+        selectedP.innerHTML = o.innerHTML;
+        optionsContainer.classList.remove('activec');
+    })
+})
+
+// ============== select ==============
+const batchSelected = document.querySelector('.batch-selected');
+const batchSelectedP = document.querySelector('.batch-selected p');
+const batchOptionsContainer = document.querySelector('.batch-options-container');
+const batchOptions = document.querySelectorAll('.batch-option label')
+
+batchSelected.addEventListener('click', () => {
+    batchOptionsContainer.classList.toggle('activec');
+})
+
+batchOptions.forEach(o => {
+    o.addEventListener('click', () => {
+        batchSelectedP.innerHTML = o.innerHTML;
+        batchOptionsContainer.classList.remove('activec');
+    })
 })
 
 

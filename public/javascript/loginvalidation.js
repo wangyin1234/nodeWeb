@@ -10,7 +10,7 @@ form.addEventListener('submit', e => {
 	const emailValue = email.value.trim();
 	const passwordValue = password.value.trim();
 
-    if (emailValue === '') {
+	if (emailValue === '') {
 		setError(email, 'Email is a required field');
 		e.preventDefault();
 	} else if (!isValidEmail(emailValue)) {
@@ -18,14 +18,14 @@ form.addEventListener('submit', e => {
 		e.preventDefault();
 	} else {
 		setSuccess(email)
-	} 
+	}
 
-    if (passwordValue === '') {
+	if (passwordValue === '') {
 		setError(password, 'Password is a required field');
 		e.preventDefault();
 	} else {
 		setSuccess(password);
-	} 
+	}
 });
 
 const setError = (element, message) => {
