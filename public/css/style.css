@@ -1160,7 +1160,6 @@ img {
 }
 
 table {
-  table-layout: fixed;
   font-size: 0.9rem;
   min-width: 700px;
   background-color: #da7b3e;
