@@ -710,6 +710,7 @@ app.post('/admin/chat', isAdmin, upload.single('chatPhoto'), catchAsync(async (r
     } else {
         newChat = new chatCompletion({ ...req.body });
     }
+    console.log(req.body)
     console.log(newChat)
     await newChat.save();
     req.flash('success', 'chatCompletion added successfully');
@@ -903,10 +904,10 @@ app.get('/users', isAdmin, async (req, res) => {
         });
 
         // Find all assistants and chatCompletions
-        const allAssistants = await assistant.find({}, 'assistantName');
-        const allChatCompletions = await chatCompletion.find({}, 'chatName');
+        const allAssistants = await assistant.find({});
+        const allChatCompletions = await chatCompletion.find({});
 
-        console.log(allChatCompletions);
+        console.log(users);
 
         res.render('users', {
             users: usersWithTotalUsage,
@@ -983,7 +984,6 @@ app.post('/admin/usage', async (req, res) => {
             // Determine the correct usage array based on modelType and assign the new usage
             const usageArray = modelType === 'assistant' ? user.assistantUsage : user.chatUsage;
             const existingUsageIndex = usageArray.findIndex(entry => entry.id.equals(modelFound._id));
-
             if (existingUsageIndex !== -1) {
                 // Update existing usage if it already exists for the user
                 usageArray[existingUsageIndex].usage = usageLimit; // Set usage to 1 as per your requirement to assign not increment
@@ -992,7 +992,9 @@ app.post('/admin/usage', async (req, res) => {
                 // Assign the prompt to the user with usage set to 1
                 usageArray.push({ id: modelFound._id, usage: usageLimit, total: 0 });
             }
-
+            console.log(user)
+            console.log(modelType)
+            console.log(modelFound)
             await user.save();
         }
         req.flash('success', "Usage Access updated");

@@ -23,7 +23,7 @@
       href="https://fonts.googleapis.com/css2?family=Hammersmith+One&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
       rel="stylesheet"
     />
-    <link rel="shortcut icon" type="image/png" href="./images/login-logo.png" />
+    <link rel="shortcut icon" type="image/png" href="./images/title.png" />
     <title>Users</title>
     <!-- Add links to CSS files and JavaScript here if needed -->
   </head>
@@ -125,12 +125,12 @@
                 <th>Email</th>
                 <th class="phone">Phone Number</th>
                 <th>Total Usage</th>
-                <% for (let assistant of prompts.assistants ) {%>
+                <!-- <% for (let assistant of prompts.assistants ) {%>
                 <th><%= assistant.assistantName %></th>
                 <% } %> <% for (let chatCompletion of prompts.chatCompletions )
                 {%>
                 <th><%= chatCompletion.chatName %></th>
-                <% } %>
+                <% } %> -->
                 <th>Usage Credit</th>
               </tr>
             </thead>
@@ -142,12 +142,12 @@
                 <td><%= user.username %></td>
                 <td class="phone"><%= user.phoneNumber %></td>
                 <td><%= user.totalUsage %></td>
-                <% for (let assistant of prompts.assistants ) {%>
+                <!-- <% for (let assistant of user.assistantUsage ) {%>
                 <td><%= assistant.usageLimit || 0 %></td>
-                <% } %> <% for (let chatCompletion of prompts.chatCompletions )
+                <% } %> <% for (let chatCompletion of user.chatUsage )
                 {%>
                 <td><%= chatCompletion.usageLimit || 0 %></td>
-                <% } %>
+                <% } %> -->
                 <td class="delete-btn uers" data-userid="<%=user._id%>">
                   <button class="btn add add-access">
                     <span class="material-symbols-outlined"> add </span>
