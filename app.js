@@ -10,7 +10,7 @@ const User = require('./models/user');
 const chatCompletion = require('./models/chatCompletion');
 const assistant = require('./models/assistant');
 const bodyParser = require('body-parser');
-const port = 3000;
+const port = 3005;
 const ejsMate = require('ejs-mate');
 const session = require('express-session');
 const flash = require('connect-flash');
@@ -39,6 +39,39 @@ const fs = require('fs');
 const { promisify } = require('util');
 const { threadId } = require('worker_threads');
 const pipeline = promisify(require('stream').pipeline);
+const { AssistantsClient, AzureKeyCredential } = require("@azure/openai-assistants");
+// const { OpenAIClient } = require("@azure/openai");
+
+// const client = new OpenAIClient(
+//     "https://ai-yangni1020ai8241861527486438.openai.azure.com/",
+//     new AzureKeyCredential("dde35d4246bd43f7bef88ba1522faa12")
+// );
+
+const assistantsClient = new AssistantsClient(
+    "https://ai-yangni1020ai8241861527486438.openai.azure.com/",
+    new AzureKeyCredential("dde35d4246bd43f7bef88ba1522faa12")
+);
+
+const AIdata = {
+    "messages": [
+        {
+            "role": "a",
+            "content": "hello"
+        }
+    ],
+    "max_tokens": 800,
+    "temperature": 0.7,
+    "frequency_penalty": 0,
+    "presence_penalty": 0,
+    "top_p": 0.95,
+    "stream": false
+}
+
+const getAiData = async () => {
+    return fetch("https://ai-yangni1020ai8241861527486438.openai.azure.com/openai/deployments/gpt4/chat/completions?api-version=2024-02-15-preview", { method: 'POST', headers: { 'api-key': 'dde35d4246bd43f7bef88ba1522faa12', 'Content-Type': 'application/json' }, body: JSON.stringify(AIdata) }).then((res) => { if (res.ok) { return res.json() } })
+}
+
+const deploymentName = "gpt4"
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY // This is also the default, can be omitted
@@ -163,8 +196,24 @@ app.get('/login', (req, res) => {
     res.render('login')
 })
 
-app.post('/login', preRegistration, passport.authenticate('local', { failureFlash: true, failureRedirect: '/login' }), (req, res) => {
+app.post('/login', preRegistration, passport.authenticate('local', { failureFlash: true, failureRedirect: '/login' }), async (req, res) => {
     console.log("Login successful");
+    // await getAiData().then(data => console.log(data))
+    // const completion = await client.getChatCompletions(deploymentName,
+    //     [
+    //         { role: "system", content: "hello" },
+    //         { role: "user", content: "world" }
+    //     ],
+    //     // model: model
+    // );
+    // console.log(completion)
+    // const myAssistant = await assistantsClient.createAssistant({
+    //     instructions: "11",
+    //     name: "11",
+    //     tools: [{ type: "code_interpreter" }],
+    //     model: 'GPT4'
+    // })
+    // console.log(myAssistant);
     res.redirect('/dashboard');
 });
 
@@ -411,7 +460,7 @@ app.get('/chat-completion/chat-interface/:id', isAuthenticated, async (req, res)
 })
 app.get('/create-thread', isAuthenticated, async (req, res) => {
     console.log("kk")
-    const emptyThread = await openai.beta.threads.create();
+    const emptyThread = await assistantsClient.createThread();
     let thread = emptyThread.id;
 
     console.log(thread);
@@ -470,10 +519,12 @@ app.post('/get-assistant-response', isAuthenticated, uploadInMemory.array('assis
             await fs.promises.writeFile(tempFilePath, file.buffer);
 
             try {
-                const openaiFile = await openai.files.create({
-                    file: fs.createReadStream(tempFilePath),
-                    purpose: 'assistants',
-                });
+                const uint8array = await fs.promises.readFile(tempFilePath);
+                const openaiFile = await assistantsClient.uploadFile(uint8array, "assistants", { tempFilePath });
+                // const openaiFile = await openai.create({
+                //     file: fs.createReadStream(tempFilePath),
+                //     purpose: 'assistants',
+                // });
                 console.log(openaiFile);
                 fileIds.push(openaiFile.id);
             } catch (e) {
@@ -484,26 +535,31 @@ app.post('/get-assistant-response', isAuthenticated, uploadInMemory.array('assis
             await fs.promises.unlink(tempFilePath);
         }
     }
-    const message = await openai.beta.threads.messages.create(
-        thread_id,
-        {
-            role: "user",
-            content: req.body.userMessage,
-            file_ids: fileIds
-        }
-    );
+    const message = assistantsClient.createMessage(thread_id, "user", req.body.userMessage, { fileIds })
+    // const message = await openai.beta.threads.messages.create(
+    //     thread_id,
+    //     {
+    //         role: "user",
+    //         content: req.body.userMessage,
+    //         file_ids: fileIds
+    //     }
+    // );
     console.log(message);
-    const run = await openai.beta.threads.runs.create(
-        req.body.thread,
-        {
-            assistant_id: req.body.assistantId,
-        }
-    );
+    const run = await assistantsClient.createRun(req.body.thread, {
+        assistantId: req.body.assistantId,
+    });
+    // const run = await openai.beta.threads.runs.create(
+    //     req.body.thread,
+    //     {
+    //         assistant_id: req.body.assistantId,
+    //     }
+    // );
     const checkStatusAndPrintMessages = async (threadId, runId) => {
         let runStatus;
         let success = true;
         while (true) {
-            runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
+            runStatus = await assistantsClient.getRun(threadId, runId);
+            // runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
             if (runStatus.status === "completed") {
                 break; // Exit the loop if the run status is completed
             } else if (runStatus.status === "failed") {
@@ -516,8 +572,8 @@ app.post('/get-assistant-response', isAuthenticated, uploadInMemory.array('assis
         }
         if (success) {
 
-
-            let messages = await openai.beta.threads.messages.list(threadId);
+            let messages = await assistantsClient.listMessages(threadId);
+            // let messages = await openai.beta.threads.messages.list(threadId);
             res.status(200).json({
                 response: messages.data[0].content[0].text.value,
                 threadId: req.body.thread,
@@ -569,14 +625,22 @@ app.post('/get-chat-response', isAuthenticated, async (req, res) => {
                 // Note: The save operation is moved after the AI response to ensure usage is only decremented upon successful response generation
 
                 // Proceed with the chat completion request
-                const completion = await openai.chat.completions.create({
-                    messages: [
+                // const completion = await openai.chat.completions.create({
+                //     messages: [
+                //         { role: "system", content: prompt },
+                //         { role: "user", content: userMessage }
+                //     ],
+                //     model: model
+                // });
+
+                const completion = await client.getChatCompletions(deploymentName,
+                    [
                         { role: "system", content: prompt },
                         { role: "user", content: userMessage }
-                    ],
-                    model: model
-                });
-
+                    ]
+                    // model: model
+                );
+                console.log(233)
                 // Now save the user with updated usage
                 await user.save();
 
@@ -701,10 +765,12 @@ app.post('/admin/assistant', isAdmin, uploadBoth, catchAsync(async (req, res) =>
             await fs.promises.writeFile(tempFilePath, file.buffer);
 
             try {
-                const openaiFile = await openai.files.create({
-                    file: fs.createReadStream(tempFilePath),
-                    purpose: 'assistants',
-                });
+                const uint8array = await fs.promises.readFile(tempFilePath);
+                const openaiFile = await assistantsClient.uploadFile(uint8array, "assistants", { tempFilePath });
+                // const openaiFile = await openai.files.create({
+                //     file: fs.createReadStream(tempFilePath),
+                //     purpose: 'assistants',
+                // });
                 console.log(openaiFile);
                 fileIds.push(openaiFile.id);
             } catch (e) {
@@ -721,32 +787,60 @@ app.post('/admin/assistant', isAdmin, uploadBoth, catchAsync(async (req, res) =>
     let myAssistant;
 
     if (req.body.fileRetrieval && req.body.codeInterpreter) {
-        myAssistant = await openai.beta.assistants.create({
-            instructions: req.body.assistantInstructions,
-            name: req.body.assistantName,
-            tools: [{ type: "code_interpreter" }, { type: "retrieval" }],
-            model: req.body.model,
-        });
-    } else if (!req.body.fileRetrieval && req.body.codeInterpreter) {
-        myAssistant = await openai.beta.assistants.create({
+        myAssistant = await assistantsClient.createAssistant({
             instructions: req.body.assistantInstructions,
             name: req.body.assistantName,
             tools: [{ type: "code_interpreter" }],
-            model: req.body.model,
-        });
-    } else if (req.body.fileRetrieval && !req.body.codeInterpreter) {
-        myAssistant = await openai.beta.assistants.create({
+            // model: req.body.model,
+            model: 'GPT4',
+        })
+        // myAssistant = await openai.beta.assistants.create({
+        // instructions: req.body.assistantInstructions,
+        // name: req.body.assistantName,
+        // tools: [{ type: "code_interpreter" }, { type: "retrieval" }],
+        // model: req.body.model,
+        // });
+    } else if (!req.body.fileRetrieval && req.body.codeInterpreter) {
+        // myAssistant = await openai.beta.assistants.create({
+        //     instructions: req.body.assistantInstructions,
+        //     name: req.body.assistantName,
+        //     tools: [{ type: "code_interpreter" }],
+        //     model: req.body.model,
+        // });
+        myAssistant = await assistantsClient.createAssistant({
             instructions: req.body.assistantInstructions,
             name: req.body.assistantName,
-            tools: [{ type: "retrieval" }],
-            model: req.body.model,
+            tools: [{ type: "code_interpreter" }],
+            // model: req.body.model,
+            model: 'GPT4',
+        })
+    } else if (req.body.fileRetrieval && !req.body.codeInterpreter) {
+        // myAssistant = await openai.beta.assistants.create({
+        //     instructions: req.body.assistantInstructions,
+        //     name: req.body.assistantName,
+        //     tools: [{ type: "retrieval" }],
+        //     model: req.body.model,
+        // });
+        myAssistant = await assistantsClient.createAssistant({
+            instructions: req.body.assistantInstructions,
+            name: req.body.assistantName,
+            tools: [{ type: "code_interpreter" }],
+            // model: req.body.model,
+            model: 'GPT4',
         });
     } else {
-        myAssistant = await openai.beta.assistants.create({
+        // myAssistant = await openai.beta.assistants.create({
+        //     instructions: req.body.assistantInstructions,
+        //     name: req.body.assistantName,
+        //     tools: [{}],
+        //     model: req.body.model,
+        // });
+        myAssistant = await assistantsClient.createAssistant({
             instructions: req.body.assistantInstructions,
             name: req.body.assistantName,
-            tools: [{}],
-            model: req.body.model,
+            tools: [{ type: "code_interpreter" }],
+            // model: req.body.model,
+            model: 'GPT4',
         });
     }
     console.log(req.body);
@@ -755,9 +849,11 @@ app.post('/admin/assistant', isAdmin, uploadBoth, catchAsync(async (req, res) =>
     console.log("assistant id: ", myAssistant.id);
 
     for (const fileId of fileIds) {
-        const myAssistantFile = await openai.beta.assistants.files.create(myAssistant.id, {
-            file_id: fileId
-        });
+        // const myAssistantFile = await openai.beta.assistants.files.create(myAssistant.id, {
+        //     file_id: fileId
+        // });
+
+        const myAssistantFile = await assistantsClient.createAssistantFile(myAssistant.id, fileId);
         console.log(myAssistantFile);
     }
 
@@ -774,7 +870,8 @@ app.delete('/admin/assistant/:id', isAdmin, catchAsync(async (req, res, next) =>
     const { id } = req.params;
     const foundAssistant = await assistant.findById(id);
     console.log(foundAssistant);
-    const response = await openai.beta.assistants.del(foundAssistant.assistantId);
+    // const response = await openai.beta.assistants.del(foundAssistant.assistantId);
+    const response = await assistantsClient.deleteAssistant(foundAssistant.assistantId)
     console.log(response);
     const deletedAssistant = await assistant.deleteOne({ _id: id });
     req.flash('success', "Assistant has been deleted");
