@@ -10,7 +10,7 @@ const User = require('./models/user');
 const chatCompletion = require('./models/chatCompletion');
 const assistant = require('./models/assistant');
 const bodyParser = require('body-parser');
-const port = 3000;
+const port = 3005;
 const ejsMate = require('ejs-mate');
 const session = require('express-session');
 const flash = require('connect-flash');
@@ -40,12 +40,12 @@ const { promisify } = require('util');
 const { threadId } = require('worker_threads');
 const pipeline = promisify(require('stream').pipeline);
 const { AssistantsClient, AzureKeyCredential } = require("@azure/openai-assistants");
-// const { OpenAIClient } = require("@azure/openai");
+const { OpenAIClient } = require("@azure/openai");
 
-// const client = new OpenAIClient(
-//     "https://ai-yangni1020ai8241861527486438.openai.azure.com/",
-//     new AzureKeyCredential("dde35d4246bd43f7bef88ba1522faa12")
-// );
+const client = new OpenAIClient(
+    "https://ai-yangni1020ai8241861527486438.openai.azure.com/",
+    new AzureKeyCredential("dde35d4246bd43f7bef88ba1522faa12")
+);
 
 const assistantsClient = new AssistantsClient(
     "https://ai-yangni1020ai8241861527486438.openai.azure.com/",
@@ -202,11 +202,11 @@ app.post('/login', preRegistration, passport.authenticate('local', { failureFlas
     // const completion = await client.getChatCompletions(deploymentName,
     //     [
     //         { role: "system", content: "hello" },
-    //         { role: "user", content: "world" }
+    //         { role: "user", content: "hi" }
     //     ],
     //     // model: model
     // );
-    // console.log(completion)
+    // console.log(completion.choices[0].message)
     // const myAssistant = await assistantsClient.createAssistant({
     //     instructions: "11",
     //     name: "11",
