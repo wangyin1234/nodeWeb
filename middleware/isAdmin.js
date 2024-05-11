@@ -12,6 +12,9 @@ module.exports = (req, res, next) => {
     }
     if (req.user.username != admin) {
         req.flash('error', "You're not an admin");
+        console.log(234)
+        console.log(req.user.username)
+        console.log(admin)
        return res.redirect('/login');
     }
     next(); 

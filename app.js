@@ -10,7 +10,7 @@ const User = require('./models/user');
 const chatCompletion = require('./models/chatCompletion');
 const assistant = require('./models/assistant');
 const bodyParser = require('body-parser');
-const port = 3000;
+const port = 3005;
 const ejsMate = require('ejs-mate');
 const session = require('express-session');
 const flash = require('connect-flash');
@@ -726,7 +726,6 @@ app.post('/admin/assistant', isAdmin, uploadBoth, catchAsync(async (req, res) =>
     req.body.fileRetrieval = req.body.fileRetrieval === 'on';
     req.body.codeInterpreter = req.body.codeInterpreter === 'on';
     let newAssistant;
-
     // Manually upload image to Cloudinary
     try {
         if (req.files.assistantPhoto) {
@@ -742,6 +741,7 @@ app.post('/admin/assistant', isAdmin, uploadBoth, catchAsync(async (req, res) =>
                 bufferStream.end(req.files.assistantPhoto[0].buffer);
                 bufferStream.pipe(uploadStream);
             });
+            console.log(result)
             const assistantPhoto = { url: result.url, filename: result.public_id };
             newAssistant = new assistant({ assistantPhoto, ...req.body });
         } else {

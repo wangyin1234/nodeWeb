@@ -87,7 +87,6 @@ header h2 {
   overflow-y: auto;
   height: 100%;
   padding: 30px 20px 170px;
-  background-image: url(../images/tiles.webp);
   background-repeat: repeat;
 }
 .chatbot :where(.chatbox, textarea)::-webkit-scrollbar {
@@ -231,6 +230,7 @@ header h2 {
 }
 
 .message-container {
+    border: 1px solid #e3e3e3;
     border-bottom: 4px solid #e3e3e3;
 }
 
