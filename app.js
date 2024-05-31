@@ -872,8 +872,8 @@ app.delete('/admin/assistant/:id', isAdmin, catchAsync(async (req, res, next) =>
     const foundAssistant = await assistant.findById(id);
     console.log(foundAssistant);
     // const response = await openai.beta.assistants.del(foundAssistant.assistantId);
-    // const response = await assistantsClient.deleteAssistant(foundAssistant.assistantId)
-    // console.log(response);
+    const response = await assistantsClient.deleteAssistant(foundAssistant.assistantId)
+    console.log(response);
     const deletedAssistant = await assistant.deleteOne({ _id: id });
     req.flash('success', "Assistant has been deleted");
     res.redirect('/admin')
